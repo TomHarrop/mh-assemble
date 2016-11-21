@@ -1,0 +1,7 @@
+.ruffus_history.sqlite
+mh-assemble.sublime-project
+mh-assemble.sublime-workspace
+data/
+output/
+ruffus/
+__pycache__
