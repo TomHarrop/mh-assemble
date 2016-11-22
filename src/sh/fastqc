@@ -15,13 +15,13 @@ for oo in "${other_output[@]}"; do
         bn="$(basename "${oo}" _R1_trimmed_fastqc.html)"
     fi
 done
-log_file="${dirname}/fastqc.${bn}.log.txt"
+log_file="${outdir}/fastqc.${bn}.log.txt"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
 
 # build command (fastqc doesn't care about R1 and R2)
-cmd=( fastqc -o "${outdir}" -t "${max_cpus}" "${input_fq}" )
+cmd=( fastqc -o "${outdir}" -t "${max_cpus}" "${input_fq[@]}" )
 
 shopt -s extglob
 printf "Final command line: "
@@ -30,8 +30,8 @@ printf "\n"
 shopt -u extglob
 
 # run fastqc
-srun --ntasks="${max_cpus}" --cpus-per-task=1 --exclusive \
-    --job-name="${bn}" --output="${log_file}" "${cmd1[@]}" &
+srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+    --job-name="${bn}" --output="${log_file}" "${cmd[@]}" &
 
 printf "[ %s: Waiting for fastqc to finish ]\n" "$(date)"
 FAIL=0
