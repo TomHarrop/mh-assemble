@@ -131,23 +131,6 @@ def main():
         output=['output/cutadapt/mp/2125-06-06-1_R1_trimmed.fastq.gz',
                 'output/cutadapt/mp/2125-06-06-1_R2_trimmed.fastq.gz'])
 
-    # run fastqc on trimmed libraries
-    fastqc = main_pipeline.subdivide(
-        name='fastqc',
-        task_func=tompltools.generate_job_function(
-            job_script='src/sh/fastqc',
-            job_name='fastqc',
-            ntasks=1,
-            cpus_per_task=2),
-        input=ruffus.output_from([pe_trimmed, mp_trimmed]),
-        filter=ruffus.formatter(
-            r'output/cutadapt/\w{2}/'
-             '(?P<LIB>[^_]+)_R(?P<RN>\d)_trimmed.fastq.gz',
-            r'output/cutadapt/\w{2}/'
-             '(?P<LIB>[^_]+)_R(?P<RN>\d)_trimmed.fastq.gz'),
-        output=['{subpath[0][2]}/fastqc/{LIB[0]}_R{RN[0]}_trimmed_fastqc.html',
-                '{subpath[0][2]}/fastqc/{LIB[1]}_R{RN[1]}_trimmed_fastqc.html'])
-
     # decontaminate PhiX (other?) sequences
     decon = main_pipeline.transform(
         name='decon',
@@ -166,6 +149,35 @@ def main():
                 '{LIB[0]}_R{RN[0]}_decon.fastq.gz',
                 'output/bbduk/{LT[1]}/'
                 '{LIB[1]}_R{RN[1]}_decon.fastq.gz'])
+
+    # run fastqc on trimmed libraries
+    fastqc = main_pipeline.subdivide(
+        name='fastqc',
+        task_func=tompltools.generate_job_function(
+            job_script='src/sh/fastqc',
+            job_name='fastqc',
+            ntasks=1,
+            cpus_per_task=2),
+        input=decon,
+        filter=ruffus.formatter(
+            r'output/bbduk/\w{2}/'
+             '(?P<LIB>[^_]+)_R(?P<RN>\d)_decon.fastq.gz',
+            r'output/bbduk/\w{2}/'
+             '(?P<LIB>[^_]+)_R(?P<RN>\d)_decon.fastq.gz'),
+        output=['output/fastqc/{LIB[0]}_R{RN[0]}_decon_fastqc.html',
+                'output/fastqc/{LIB[1]}_R{RN[1]}_decon_fastqc.html'])
+
+    # run velvetoptimiser for configuring velvet
+    # set threads for velvet to 1 !!!
+    # bottleneck is velveth writing Sequences file to disk
+    velvet_opt = main_pipeline.merge(
+        name='velvet_opt',
+        task_func=tompltools.generate_job_function(
+            job_script='src/sh/velvet_opt',
+            job_name='velvet_opt',
+            cpus_per_task=6),
+        input=decon,
+        output='output/velvet_opt/velvet_opt_logfile.txt')
 
     ###################
     # RUFFUS COMMANDS #
