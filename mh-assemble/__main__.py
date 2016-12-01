@@ -167,17 +167,38 @@ def main():
         output=['output/fastqc/{LIB[0]}_R{RN[0]}_decon_fastqc.html',
                 'output/fastqc/{LIB[1]}_R{RN[1]}_decon_fastqc.html'])
 
-    # run velvetoptimiser for configuring velvet
-    # set threads for velvet to 1 !!!
-    # bottleneck is velveth writing Sequences file to disk
-    velvet_opt = main_pipeline.merge(
-        name='velvet_opt',
+    # reverse complement mp reads
+    mp_revcomp = main_pipeline.transform(
+        name='mp_revcomp',
         task_func=tompltools.generate_job_function(
-            job_script='src/sh/velvet_opt',
-            job_name='velvet_opt',
-            cpus_per_task=6),
+            job_script='src/sh/mp_revcomp',
+            job_name='mp_revcomp',
+            ntasks=2,
+            cpus_per_task=1),
         input=decon,
-        output='output/velvet_opt/velvet_opt_logfile.txt')
+        filter=ruffus.formatter(
+            r'output/bbduk/mp/'
+             '(?P<LIB>[^_]+)_R(?P<RN>\d)_decon.fastq.gz',
+            r'output/bbduk/mp/'
+             '(?P<LIB>[^_]+)_R(?P<RN>\d)_decon.fastq.gz'),
+        output=['output/revcomp/{LIB[0]}_R{RN[0]}_rc.fastq.gz',
+                'output/revcomp/{LIB[1]}_R{RN[1]}_rc.fastq.gz'])
+
+    # prepare files with velveth
+    hash_files = main_pipeline.collate(
+        name='hash_files',
+        task_func=tompltools.generate_job_function(
+            job_script='src/sh/hash_files',
+            job_name='hash_files',
+            ntasks=1,
+            cpus_per_task=8),
+        input=decon,
+        add_inputs=ruffus.add_inputs(ruffus.output_from(mp_revcomp)),
+        filter=ruffus.regex(
+            r'output/bbduk/pe/2125-06-11-1_R(\d)_decon.fastq.gz'),
+        output=['output/velveth/Sequences'])
+
+
 
     ###################
     # RUFFUS COMMANDS #

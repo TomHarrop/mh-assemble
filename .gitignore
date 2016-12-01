@@ -2,6 +2,7 @@
 mh-assemble.sublime-project
 mh-assemble.sublime-workspace
 data/
-output/
+output
+bin/
 ruffus/
 __pycache__
