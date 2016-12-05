@@ -47,7 +47,7 @@ printf "       mp_r1: %s\n       mp_r2: %s\n" "${mp_r1}" "${mp_r2}"
  minkmerlength="11"
   velvethfiles="-shortPaired -fastq -separate ${pe_r1} ${pe_r2} "
   velvethfiles+="-shortPaired2 -fastq -separate ${mp_r1} ${mp_r2}"
-velvetgoptions="-ins_length 465 -ins_length2 7000"
+velvetgoptions="-ins_length 476 -ins_length2 7000"
 #genomesize=800
      dir_final="${outdir}/vo"
         prefix="${tmp_outdir}/$(basename "${other_output}" _logfile.txt)"
@@ -55,7 +55,8 @@ velvetgoptions="-ins_length 465 -ins_length2 7000"
 # build command
 cmd=( velvetoptimiser --hashs="${minkmerlength}" --hashe="${maxkmerlength}"
       --velvethfiles="${velvethfiles}" --velvetgoptions="${velvetgoptions}"
-      --threads="${max_cpus}" --prefix="${prefix}" --dir_final="${dir_final}" )
+      --threads="${max_cpus}" --prefix="${prefix}" --dir_final="${dir_final}" 
+      --verbose )
 
 shopt -s extglob
 printf "Final command line: "
@@ -73,7 +74,7 @@ fail_wait
 
 # move results to outdir
 printf "[ %s: Moving results directories ]\n" "$(date)"
-mv "${tmp_outdir}/*" outdir/
+mv "${tmp_outdir}/*" outdir/ || exit 1
 
 # log metadata
 metadata_file="${outdir}/METADATA.csv"
