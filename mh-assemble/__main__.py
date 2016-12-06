@@ -179,6 +179,20 @@ def main():
             [r'output/fastqc/{LN[0]}_R1{VL[0]}_fastqc.html',
              r'output/fastqc/{LN[0]}_R2{VL[0]}_fastqc.html']])
 
+    # run solexaqc on decontaminated libraries
+    main_pipeline.subdivide(
+        name='solexaqc',
+        task_func=tompltools.generate_job_function(
+            job_script='src/sh/solexaqc',
+            job_name='solexaqc'),
+        input=decon,
+        filter=ruffus.formatter(
+            r'.+/(?P<LN>[^_]+)_R(?P<RN>\d)(?P<VL>_?\w*).fastq.gz'),
+        output=[
+            [r'output/solexaqc/{LN[0]}_R1{VL[0]}.fastq.gz.quality',
+             r'output/solexaqc/{LN[0]}_R2{VL[0]}.fastq.gz.quality']])
+
+
     # prepare files with velveth
     # set threads for velvet to 1 !!!
     # hash_files = main_pipeline.merge(
