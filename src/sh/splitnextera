@@ -26,11 +26,27 @@ done
 
 printf "\tfq_r1: %s\n\tfq_r2: %s\n" "${fq_r1}" "${fq_r2}"
 
+# match the output files
+for fq_file in "${output_fq[@]}"; do
+    bn="$(basename "${fq_file}" .fastq.gz)"
+    if grep -q ".pe" <<< "${bn}"; then
+        ofq_pe="${fq_file}"
+    elif grep -q ".se" <<< "${bn}"; then
+        ofq_se="${fq_file}"
+    elif grep -q ".mp" <<< "${bn}"; then
+        ofq_mp="${fq_file}"
+    elif grep -q ".unknown" <<< "${bn}"; then
+        ofq_unk="${fq_file}"
+    fi
+done
+
 # build the command
 bn="$(basename "${fq_r1}" _R1_trimmed.fastq.gz)"
 out_prefix="${outdir}/${bn}"
 log_file="${outdir}/${bn}_nxtrim.log.txt"
-cmd=( bin/nxtrim --r1 "${fq_r1}" --r2 "${fq_r2}" -O "${out_prefix}" )
+cmd=( bin/bbmap/splitnextera.sh in="${fq_r1}" in2="${fq_r2}"
+      out="${ofq_mp}" outf="${ofq_pe}" outu="${ofq_unk}" outs="${ofq_se}" 
+      mask )
 
 shopt -s extglob
 printf "Final command line: "

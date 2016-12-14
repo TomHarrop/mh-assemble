@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-printf "[ %s: Run SolexaQA++ on trimmed libraries ]\n" \
+printf "[ %s: Digital normalization of libraries ]\n" \
     "$(date)"
 
 # shellcheck disable=SC1091
@@ -9,21 +9,20 @@ source "src/sh/bash_header"
 source "src/sh/io_parser"
 
 # make outdir
-outdir="$(dirname "${other_output}")"
-for oo in "${other_output[@]}"; do
-    if grep -q "_R1" <<< "$(basename "${oo}")"; then 
-        bn="$(basename "${oo//_R1/}" .fastq.gz.quality)"
-    fi
-done
-log_file="${outdir}/${bn}_solexaqc.log.txt"
+outdir="$(dirname "${output_fq}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
 
-# build command (SolexaQA doesn't care about R1 and R2)
-my_solexaqc="bin/SolexaQA++"
-cmd=( "${my_solexaqc}" analysis "${input_fq[@]}" --directory "${outdir}"
-      --illumina )
+# build command
+java_ram=$((ram_limit/1000000000))"g"
+bn="$( basename "${output_fq}" .fastq.gz )"
+cmd=( bin/bbmap/bbnorm.sh threads="${max_cpus}" "-Xmx${java_ram}"
+      in="${input_fq}" out="${output_fq}"
+      target=57 min=5 prefilter ecc
+      khist="${outdir}/${bn}_hist_before.txt"
+      khistout="${outdir}/${bn}_hist_after.txt"
+      peaks="${outdir}/${bn}_peaks.txt" )
 
 shopt -s extglob
 printf "Final command line: "
@@ -31,11 +30,12 @@ printf "%s " "${cmd[@]//+([[:blank:]])/ }"
 printf "\n"
 shopt -u extglob
 
-# run SolexaQA
+# run bbnorm
+log_file="${outdir}/${bn}_bbnorm.log.txt"
 srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${log_file}" "${cmd[@]}" &
 
-printf "[ %s: Waiting for SolexaQA++ to finish ]\n" "$(date)"
+printf "[ %s: Waiting for bbnorm to finish ]\n" "$(date)"
 FAIL=0
 fail_wait
 
@@ -49,7 +49,7 @@ cat <<- _EOF_ > "${metadata_file}"
     branch,$(git rev-parse --abbrev-ref HEAD)
     hash,$(git rev-parse HEAD)
     date,$(date +%F)
-    SolexaQC++ version,$("${my_solexaqc}" 2>&1 | sed '2q;d')
+    bbnorm revision,$(bin/bbmap/bbnorm.sh 2>&1 | sed '3q;d')
     output,${outdir}
 _EOF_
 

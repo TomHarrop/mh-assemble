@@ -10,11 +10,7 @@ source "src/sh/io_parser"
 
 # make outdir
 outdir="$(dirname "${other_output}")"
-for oo in "${other_output[@]}"; do
-    if grep -q "_R1_" <<< "$(basename "${oo}")"; then 
-        bn="$(basename "${oo//_R1/}" _fastqc.html)"
-    fi
-done
+bn="$(basename "${other_output}" _fastqc.html)"
 log_file="${outdir}/fastqc.${bn}.log.txt"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
