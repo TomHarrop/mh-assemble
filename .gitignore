@@ -1,3 +1,4 @@
+mh-assemble.Rproj
 .ruffus_history.sqlite
 mh-assemble.sublime-project
 mh-assemble.sublime-workspace
@@ -6,3 +7,4 @@ output
 bin/
 ruffus/
 __pycache__
+.Rproj.user
