@@ -8,3 +8,4 @@ bin/
 ruffus/
 __pycache__
 .Rproj.user
+.Rhistory

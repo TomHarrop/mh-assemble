@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+printf "[ %s: Compute overlaps graph with edena ]\n" \
+    "$(date)"
+
+# shellcheck disable=SC1091
+source "src/sh/bash_header"
+# shellcheck disable=SC1091
+source "src/sh/io_parser"
+
+# set edena binary
+my_edena=bin/edena
+
+# pair the files
+for fq_file in "${input_fq[@]}"; do
+    bn="$(basename "${fq_file}" .fastq.gz)"
+    if grep -q "_R1" <<< "${bn}"; then
+        fq_r1="${fq_file}"
+    elif grep -q "_R2" <<< "${bn}"; then
+        fq_r2="${fq_file}"
+    fi
+done
+
+# make temporary directory
+script_name="$(basename "$0")"
+tmp_outdir="$(mktemp --tmpdir -d "${script_name}_tmp.XXXXXXXX")"
+tmp_R1="${tmp_outdir}/R1.fq"
+tmp_R2="${tmp_outdir}/R2.fq"
+
+# make outdir
+outdir="$(dirname "${other_output}")"
+bn="$(basename "${other_output}" .ovc)"
+if [[ ! -d "${outdir}" ]]; then
+    mkdir -p "${outdir}"
+fi
+
+# unzip fastq.gz files to tmpdir
+printf "[ %s: Unzipping fastq.gz to tmpdir %s ]\n" "$(date)" "${tmp_outdir}"
+zcat "${fq_r1}" > "${tmp_R1}" &
+zcat "${fq_r2}" > "${tmp_R2}" &
+FAIL=0
+fail_wait
+
+# parameters
+nThreads=10
+
+# build command
+cmd=( "${my_edena}" -nThreads "${nThreads}" -DRpairs "${tmp_R1}" "${tmp_R2}"
+      -p "${outdir}/${bn}" )
+shopt -s extglob
+printf "Final command line: "
+printf "%s " "${cmd[@]//+([[:blank:]])/ }"
+printf "\n"
+shopt -u extglob
+
+# run edena
+log_file="${outdir}/edena_overlaps.log.txt"
+"${cmd[@]}" &> "${log_file}" &
+
+printf "[ %s: Waiting for edena to finish ]\n" "$(date)"
+FAIL=0
+fail_wait
+
+# clean up temporary files
+printf "[ %s: Removing temporary directory ]\n" "$(date)"
+rm -rf "${tmp_outdir}" || exit 1
+
+# log metadata
+metadata_file="${outdir}/METADATA.edena_overlaps.csv"
+
+printf "[ %s: Logging metadata ]\n" "$(date)"
+printf "metadata_file: %s\n" "${metadata_file}"
+cat <<- _EOF_ > "${metadata_file}"
+    Script,${0}
+    branch,$(git rev-parse --abbrev-ref HEAD)
+    hash,$(git rev-parse HEAD)
+    date,$(date +%F)
+    edena,$("${my_edena}" 2>&1 | sed '1q;d')
+    output,${outdir}
+_EOF_
+
+printf "[ %s: Done ]\n" "$(date)"
+
+exit 0
