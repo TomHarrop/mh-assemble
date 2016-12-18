@@ -93,7 +93,7 @@ rutils::GenerateMessage("Saving output")
 ggsave(filename = parsed.args$output_pdf,
        device = cairo_pdf,
        plot = kmer_plot,
-       width = 210, height = 297, units = "mm")
+       width = 10, height = 7.5, units = "in")
 saveRDS(hist.data, parsed.args$other_output)
 
 # write logs
