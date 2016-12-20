@@ -171,7 +171,7 @@ def main():
         filter=ruffus.formatter(r'.+/(?P<LN>[^(_|.)]+)(?P<VL>_?\w*).fastq.gz'),
         output=[r'output/bbnorm/{LN[0]}{VL[0]}.fastq.gz'])
 
-    # subsample reads for BLAST qc
+    # subsample reads, blast with biopython and parse results
     fq_subsample = main_pipeline.subdivide(
         name='fq_subsample',
         task_func=tompltools.generate_job_function(
@@ -179,8 +179,24 @@ def main():
             job_name='fq_subsample'),
         input=bbnorm,
         filter=ruffus.formatter(r'.+/(?P<LN>[^(_|.)]+)(?P<VL>_?\w*).fastq.gz'),
-        output=[r'output/subsample/{LN[0]}{VL[0]}_R1.fastq.gz',
-                r'output/subsample/{LN[0]}{VL[0]}_R2.fastq.gz'])
+        output=[r'output/blastqc/{LN[0]}{VL[0]}_R1.fastq.gz',
+                r'output/blastqc/{LN[0]}{VL[0]}_R2.fastq.gz'])
+    blast_reads = main_pipeline.transform(
+        name='blast_reads',
+        task_func=tompltools.generate_job_function(
+            job_script='src/py/blast_reads.py',
+            job_name='blast_reads'),
+        input=fq_subsample,
+        filter=ruffus.suffix('.fastq.gz'),
+        output=['.xml'])
+    main_pipeline.transform(
+        name='parse_blast_results',
+        task_func=tompltools.generate_job_function(
+            job_script='src/py/parse_blast_results.py',
+            job_name='parse_blast_results'),
+        input=blast_reads,
+        filter=ruffus.suffix('.xml'),
+        output=['.table'])
 
     # trim reads to 100 bp for edena?
     clip_to_100b = main_pipeline.subdivide(
