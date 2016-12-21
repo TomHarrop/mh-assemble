@@ -208,7 +208,7 @@ def main():
         input=fq_subsample,
         filter=ruffus.suffix('.fastq.gz'),
         output=['.xml'])
-    main_pipeline.transform(
+    parse_blast_results = main_pipeline.transform(
         name='parse_blast_results',
         task_func=tompltools.generate_job_function(
             job_script='src/py/parse_blast_results.py',
@@ -216,6 +216,14 @@ def main():
         input=blast_reads,
         filter=ruffus.suffix('.xml'),
         output=['.table'])
+    main_pipeline.merge(
+        name='plot_blast_resuts',
+        task_func=tompltools.generate_job_function(
+            job_script='src/r/extract_blast_hits_per_taxid.R',
+            job_name='plot_blast_resuts'),
+        input=[parse_blast_results, download_taxonomy_databases],
+        output=['output/blastqc/plots.pdf'])
+    
     # trim reads to 100 bp for edena?
     clip_to_100b = main_pipeline.subdivide(
         name='clip_to_100b',
